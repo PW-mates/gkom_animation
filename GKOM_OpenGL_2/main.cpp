@@ -1,8 +1,8 @@
 #include "OpenGLWindow.h"
 
 // Remaining task list:
-// 1. support for basic input file type with 3D model : obj
-// 2. Phong shading
+// 1. support for basic input file type with 3D model : obj - done
+// 2. Phong shading - partially done
 // 3. interpretation of material properties : diffuse, specular
 // 4. point light support - the ability to move the light, edit
 //  properties of light

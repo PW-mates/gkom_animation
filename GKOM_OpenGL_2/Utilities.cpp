@@ -171,7 +171,7 @@ GLuint LoadBox(GLenum* primitive, unsigned int* count)
     *primitive = GL_TRIANGLES;
 
     return VAO;
-}
+}    
 
 /// <summary>
 /// Load a model from a file with obj format
@@ -247,7 +247,7 @@ GLuint LoadObj(const std::string& path, GLenum* primitive, unsigned int* count) 
     }
 
     // For a basic implementation we consider that our primitive is GL_TRIANGLES
-    *primitive = GL_TRIANGLES;
+    *primitive = GL_TRIANGLE_STRIP;
     *count = vertices.size();
 
     // Load into GPU and return GLuint

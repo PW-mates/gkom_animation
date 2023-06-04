@@ -40,6 +40,7 @@ private:
 	unsigned int cubeVAOVertexCount;
 
 	void processInput();
+	void processMouseInput();
 
 	glm::vec2 windowResolution;
 	float fieldOfView;
@@ -52,5 +53,10 @@ private:
 	glm::vec3 cameraDirection;
 	glm::vec3 cameraUp;
 	float cameraSpeed;
+
+	// Mouse input
+	bool isDragging;
+	double lastMouseX;
+	double lastMouseY;
 
 };

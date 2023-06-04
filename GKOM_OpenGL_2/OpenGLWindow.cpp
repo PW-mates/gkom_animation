@@ -1,6 +1,7 @@
 #include "OpenGLWindow.h"
 
 void FramebufferSizeChangeCallback(GLFWwindow* window, int width, int height);
+void MouseScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 
 OpenGLWindow::OpenGLWindow()
 {
@@ -8,13 +9,13 @@ OpenGLWindow::OpenGLWindow()
 
     boxVAO = 0;
 
-    windowResolution = glm::vec2(800, 600);
+    windowResolution = glm::vec2(1200, 900);
     fieldOfView = 45;
 
     cameraPosition = glm::vec3(0, 0, 20);
     cameraDirection = glm::vec3(0, 0, -1);
     cameraUp = glm::vec3(0, 1, 0);
-    cameraSpeed = 0.05f;
+    cameraSpeed = 0.01f;
 }
 
 OpenGLWindow::~OpenGLWindow()
@@ -53,6 +54,7 @@ bool OpenGLWindow::InitWindow()
     }
 
     glfwSetFramebufferSizeCallback(_window, FramebufferSizeChangeCallback);
+    glfwSetScrollCallback(_window, MouseScrollCallback);
 }
 
 void OpenGLWindow::InitScene()
@@ -63,13 +65,23 @@ void OpenGLWindow::InitScene()
 
     boxVAO = LoadBox(&boxVAOPrimitive, &boxVAOVertexCount);
 
-    cubeVAO = LoadObj("C:\\Users\\admin\\Downloads\\GKOM_OpenGL_2\\GKOM_OpenGL_2\\Resources\\Shaders\\sphere.obj", &cubeVAOPrimitive, &cubeVAOVertexCount);
+    cubeVAO = LoadObj("..\\Resources\\Shaders\\sphere.obj", &cubeVAOPrimitive, &cubeVAOVertexCount);
 }
 
 void OpenGLWindow::MainLoop()
 {
     glClearColor(0.1f, 0.2f, 0.3f, 0.0f);
     glEnable(GL_DEPTH_TEST);
+
+
+    // TODO: Load from material file
+    glm::vec3 lightAmbient(1.0f, 1.0f, 1.0f);
+    glm::vec3 lightDiffuse(1.0f, 1.0f, 1.0f);
+    glm::vec3 lightPos(0.0f, 0.0f, 15.0f);
+    glm::vec3 lightColor(1.0f, 0.5f, 1.0f);
+    
+    Program lightProgram;
+    bool useTransformations = false;
 
     while (!glfwWindowShouldClose(_window))
     {
@@ -79,32 +91,58 @@ void OpenGLWindow::MainLoop()
 
         cameraMatrix = glm::lookAt(cameraPosition, cameraPosition + cameraDirection, cameraUp);
 
-        transformationProgram.Activate();
+        if (useTransformations) {
+            lightProgram = transformationProgram;
+            transformationProgram.Activate();
 
-        glUniformMatrix4fv(transformationProgram.GetUniformID("uCameraMatrix"), 1, GL_FALSE, glm::value_ptr(cameraMatrix));
-        glUniformMatrix4fv(transformationProgram.GetUniformID("uProjectionMatrix"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+            glUniformMatrix4fv(transformationProgram.GetUniformID("uCameraMatrix"), 1, GL_FALSE, glm::value_ptr(cameraMatrix));
+            glUniformMatrix4fv(transformationProgram.GetUniformID("uProjectionMatrix"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+        }
+        else {
+            lightProgram = phongProgram;
+            // Add Phong shader
+            phongProgram.Activate();
 
-        //for (int i = -2; i <= 2; i++)
-        //{
-        //    for (int j = -2; j <= 2; j++)
-        //    {
-        //        modelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(i * 3.0f, j * 3.0f, 0.0f));
+            glUniformMatrix4fv(phongProgram.GetUniformID("uCameraMatrix"), 1, GL_FALSE, glm::value_ptr(cameraMatrix));
+            glUniformMatrix4fv(phongProgram.GetUniformID("uProjectionMatrix"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
 
-        //        glUniformMatrix4fv(transformationProgram.GetUniformID("uModelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
 
-        //        glBindVertexArray(boxVAO);
+            //glUniformMatrix4fv(phongProgram.GetUniformID("uLightPosition"), 1, GL_FALSE, glm::value_ptr(lightPos));
+            //glUniformMatrix4fv(phongProgram.GetUniformID("uLightAmbient"), 1, GL_FALSE, glm::value_ptr(lightAmbient));
+            //glUniformMatrix4fv(phongProgram.GetUniformID("uLightDiffuse"), 1, GL_FALSE, glm::value_ptr(lightDiffuse));
+            glUniform3fv(phongProgram.GetUniformID("uLightPosition"), 1, glm::value_ptr(lightPos));
+            glUniform3fv(phongProgram.GetUniformID("uLightAmbient"), 1, glm::value_ptr(lightAmbient));
+            glUniform3fv(phongProgram.GetUniformID("uLightDiffuse"), 1, glm::value_ptr(lightDiffuse));
+            glUniform3fv(phongProgram.GetUniformID("uViewPos"), 1, glm::value_ptr(cameraPosition));
+            
+            //glUniformMatrix4fv(phongProgram.GetUniformID("uViewPos"), 1, GL_FALSE, glm::value_ptr(cameraPosition));
+            glUniform3fv(phongProgram.GetUniformID("uLightColor"), 1, glm::value_ptr(lightColor));
+        }
 
-        //        glDrawArrays(boxVAOPrimitive, 0, boxVAOVertexCount);
-        //    }
-        //}
+        
 
-        modelMatrix = glm::translate(glm::mat4(2.0f), glm::vec3(1 * 3.0f, 1 * 3.0f, 10.0f));
-        glUniformMatrix4fv(transformationProgram.GetUniformID("uModelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
+        for (int i = -2; i <= 2; i++)
+        {
+            for (int j = -2; j <= 2; j++)
+            {
+                modelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(i * 3.0f, j * 3.0f, 0.0f));
+
+                glUniformMatrix4fv(lightProgram.GetUniformID("uModelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
+
+                glBindVertexArray(boxVAO);
+
+                glDrawArrays(boxVAOPrimitive, 0, boxVAOVertexCount);
+            }
+        }
+
+        modelMatrix = glm::translate(glm::mat4(2.0f), glm::vec3(0 * 3.0f, 0 * 3.0f, 10.0f));
+        glUniformMatrix4fv(lightProgram.GetUniformID("uModelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
         glBindVertexArray(cubeVAO);
         glDrawArrays(cubeVAOPrimitive, 0, cubeVAOVertexCount);
 
 
         processInput();
+        processMouseInput();
 
         glfwSwapBuffers(_window);
         glfwPollEvents();
@@ -181,6 +219,76 @@ void OpenGLWindow::processInput()
         // Look right
         cameraDirection = glm::vec3(1, 0, 0);
     }
+
+    if (glfwGetKey(_window, GLFW_KEY_5) == GLFW_PRESS)
+    {
+		// Look up
+		cameraDirection = glm::vec3(0, 1, 0);
+	}
+
+    if (glfwGetKey(_window, GLFW_KEY_6) == GLFW_PRESS)
+    {
+		// Look down
+		cameraDirection = glm::vec3(0, -1, 0);
+	}
+}
+
+void OpenGLWindow::processMouseInput() {
+    if (glfwGetMouseButton(_window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+    {
+		// Start dragging
+        if (!isDragging)
+        {
+			isDragging = true;
+			glfwGetCursorPos(_window, &lastMouseX, &lastMouseY);
+		}
+        else
+        {
+			// Compute new orientation
+			double mouseX, mouseY;
+			glfwGetCursorPos(_window, &mouseX, &mouseY);
+
+			double deltaX = mouseX - lastMouseX;
+			double deltaY = mouseY - lastMouseY;
+
+			lastMouseX = mouseX;
+			lastMouseY = mouseY;
+
+			double yawSign = cameraUp.y < 0 ? -1.0f : 1.0f;
+
+            std::cout << "cameraDirection.x" << cameraDirection.x << std::endl;
+            std::cout << "cameraDirection.y" << cameraDirection.y << std::endl;
+            std::cout << "cameraDirection.z" << cameraDirection.z << std::endl;
+
+            if (cameraDirection.x != 0)
+            {
+                cameraPosition.y -= yawSign * deltaY * cameraSpeed * -1;
+                cameraPosition.z -= yawSign * deltaX * cameraSpeed * cameraDirection.x;
+            }
+            else if (cameraDirection.y != 0)
+            {
+                cameraPosition.x += yawSign * deltaX * cameraSpeed * cameraDirection.y;
+				cameraPosition.z += yawSign * deltaY * cameraSpeed * cameraDirection.y;
+            }
+            else if (cameraDirection.z != 0)
+            {
+				cameraPosition.x += yawSign * deltaX * cameraSpeed * cameraDirection.z;
+                cameraPosition.y += yawSign * deltaY * cameraSpeed;
+            }
+		    
+        }
+	}
+	else
+	{
+		// Stop dragging
+		isDragging = false;
+	}
+}
+
+void MouseScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
+{
+    std::cout << "Scroll offset: " << xoffset << ", " << yoffset << std::endl;
+    
 }
 
 void FramebufferSizeChangeCallback(GLFWwindow* window, int width, int height)
