@@ -7,6 +7,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include <iostream>
+#include <chrono>
 
 #include "Program.h"
 #include "Utilities.h"
@@ -33,11 +34,17 @@ private:
 
 	GLuint boxVAO;
 	GLenum boxVAOPrimitive;
+	Material boxMaterial;
+
 	GLuint cubeVAO;
 	GLenum cubeVAOPrimitive;
+	Material cubeMaterial;
+	PointLight pointLight;
 
 	unsigned int boxVAOVertexCount;
 	unsigned int cubeVAOVertexCount;
+
+	void renderObject(Program& program, GLuint VAO, GLenum primitive, unsigned int count, glm::vec3 position, Material material);
 
 	void processInput();
 	void processMouseInput();
@@ -53,6 +60,8 @@ private:
 	glm::vec3 cameraDirection;
 	glm::vec3 cameraUp;
 	float cameraSpeed;
+
+	uint64_t startTime;
 
 	// Mouse input
 	bool isDragging;

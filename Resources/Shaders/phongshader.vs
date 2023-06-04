@@ -7,16 +7,29 @@ layout (location = 2) in vec3 attrNormal;
 uniform mat4 uProjectionMatrix;
 uniform mat4 uCameraMatrix;
 uniform mat4 uModelMatrix;
-uniform vec3 uLightPosition;
 
-out vec3 vColor;
-out vec3 vNormal;
-out vec3 vFragPos;
+struct PointLight {
+    vec3 position;
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+    vec3 color;
+};
+uniform PointLight uLight;
+
+uniform vec3 uViewPos;
+
+out vec3 FragPos;
+out vec3 Normal;
+out vec3 LightPos;
+out vec3 ViewPos;
 
 void main()
 {
-    vColor = attrColor;
-    vNormal = attrNormal;
-    vFragPos = vec3(uModelMatrix * vec4(attrPosition, 1.0));
-    gl_Position = uProjectionMatrix * uCameraMatrix * uModelMatrix * vec4(attrPosition, 1.0);
+    vec4 worldPosition = uModelMatrix * vec4(attrPosition, 1.0);
+    gl_Position = uProjectionMatrix * uCameraMatrix * worldPosition;
+    FragPos = worldPosition.xyz;
+    Normal = mat3(transpose(inverse(uModelMatrix))) * attrNormal;
+    LightPos = uLight.position;
+    ViewPos = uViewPos;
 }

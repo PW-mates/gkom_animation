@@ -1,5 +1,10 @@
 #include "Utilities.h"
 
+uint64_t getCurrentTime()
+{
+	return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
 GLuint LoadBox(GLenum* primitive, unsigned int* count)
 {
     GLuint VBO;
@@ -178,7 +183,8 @@ GLuint LoadBox(GLenum* primitive, unsigned int* count)
 /// </summary>F
 /// <param name="path">Path to the file</param>
 /// <returns>VAO of the model</returns>
-GLuint LoadObj(const std::string& path, GLenum* primitive, unsigned int* count) {
+GLuint LoadObj(const std::string& path, GLenum* primitive, unsigned int* count, Material *material) {
+    namespace fs = std::filesystem;
     struct Vertex {
         glm::vec3 position;
         glm::vec2 uv;
@@ -191,10 +197,21 @@ GLuint LoadObj(const std::string& path, GLenum* primitive, unsigned int* count) 
     std::vector<Vertex> vertices;
 
     std::ifstream file(path);
+    std::string full_path = fs::absolute(path).string();
+
+    #ifdef _WIN32
+    std::string directory = full_path.substr(0, full_path.find_last_of('\\'));
+    #else
+    std::string directory = full_path.substr(0, full_path.find_last_of('/'));
+    #endif
+
     if (!file.is_open()) {
         std::cerr << "Unable to open file " << path << std::endl;
         return 0;
     }
+
+    bool has_material = false;
+   
 
     std::string line;
     while (std::getline(file, line)) {
@@ -235,16 +252,21 @@ GLuint LoadObj(const std::string& path, GLenum* primitive, unsigned int* count) 
             vertices.push_back(vert3);
         }
         else if (type == "mtllib") {
+            has_material = true;
             std::string mtlfile;
             ss >> mtlfile;
-            std::cout << "Material library file: " << mtlfile << std::endl;
+
+            *material = LoadMtl(directory + "/" + mtlfile);
         }
         else if (type == "o") {
             std::string object;
             ss >> object;
-            std::cout << "Object: " << object << std::endl;
         }
     }
+
+    if (!has_material) {
+		*material = DefaultMtl();
+	}
 
     // For a basic implementation we consider that our primitive is GL_TRIANGLES
     *primitive = GL_TRIANGLE_STRIP;
@@ -272,4 +294,112 @@ GLuint LoadObj(const std::string& path, GLenum* primitive, unsigned int* count) 
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
 
     return VAO;
+}
+
+/// <summary>
+/// Load a Material from a file with mtl format
+/// </summary>
+/// <param name="path">Path to the file</param>
+/// <returns>Material</returns>
+Material LoadMtl(const std::string& path)
+{
+    std::ifstream file(path);
+    std::string line;
+    Material currentMaterial;
+
+    if (!file.is_open()) {
+		std::cerr << "Unable to open file " << path << std::endl;
+		return currentMaterial;
+	}
+
+    while (std::getline(file, line)) {
+        std::stringstream ss(line);
+        std::string token;
+        ss >> token;
+
+        if (token == "newmtl") {
+            ss >> currentMaterial.name;
+        }
+        else if (token == "Ka") {
+            ss >> currentMaterial.ambient.x >> currentMaterial.ambient.y >> currentMaterial.ambient.z;
+        }
+        else if (token == "Kd") {
+            ss >> currentMaterial.diffuse.x >> currentMaterial.diffuse.y >> currentMaterial.diffuse.z;
+        }
+        else if (token == "Ks") {
+            ss >> currentMaterial.specular.x >> currentMaterial.specular.y >> currentMaterial.specular.z;
+        }
+        else if (token == "Ns") {
+            ss >> currentMaterial.shininess;
+        }
+    }
+    return currentMaterial;
+}
+
+
+Material DefaultMtl()
+{
+    Material defaultMaterial;
+    defaultMaterial.name = "default";
+    defaultMaterial.ambient = glm::vec3(0.2f, 0.2f, 0.2f);
+    defaultMaterial.diffuse = glm::vec3(0.8f, 0.8f, 0.8f);
+    defaultMaterial.specular = glm::vec3(1.0f, 1.0f, 1.0f);
+    defaultMaterial.shininess = 32.0f;
+
+    return defaultMaterial;
+}
+
+PointLight DefaultPointLight()
+{
+    PointLight defaultPointLight;
+    defaultPointLight.position = glm::vec3(3.0f, 3.0f, 30.0f);
+    defaultPointLight.ambient = glm::vec3(0.2f, 0.2f, 0.2f);
+    defaultPointLight.diffuse = glm::vec3(0.8f, 0.8f, 0.8f);
+    defaultPointLight.specular = glm::vec3(0.8f, 0.8f, 0.8f);
+    defaultPointLight.color = glm::vec3(0.5f, 0.5f, 1.0f);
+
+    return defaultPointLight;
+}
+
+Animation::Animation() {
+    keyframes = std::vector<Keyframe>();
+}
+
+Animation::Animation(std::vector<Keyframe> keyframes)
+    : keyframes(keyframes)
+{
+    std::sort(this->keyframes.begin(), this->keyframes.end(),
+        [](const Keyframe& a, const Keyframe& b) { return a.time < b.time; });
+}
+
+Animation::~Animation() {
+    keyframes.clear();
+}
+
+glm::vec3 Animation::evaluate(float time) {
+    if (keyframes.empty()) return glm::vec3(0.0f);
+
+    if (time <= keyframes.front().time) return keyframes.front().value;
+    if (time >= keyframes.back().time) return keyframes.back().value;
+
+    auto next_keyframe = std::lower_bound(keyframes.begin(), keyframes.end(), time,
+        [](const Keyframe& keyframe, float time) { return keyframe.time < time; });
+    auto prev_keyframe = next_keyframe - 1;
+
+    float t = (time - prev_keyframe->time) / (next_keyframe->time - next_keyframe->time);
+    return glm::mix(prev_keyframe->value, next_keyframe->value, t);
+}
+
+void Animation::insertKeyframe(float time, glm::vec3 value) {
+    keyframes.push_back({ time, value });
+    std::sort(keyframes.begin(), keyframes.end(),
+        [](const Keyframe& a, const Keyframe& b) { return a.time < b.time; });
+}
+
+void Animation::editKeyframe(float time, glm::vec3 value) {
+    auto it = std::find_if(keyframes.begin(), keyframes.end(),
+        [time](const Keyframe& keyframe) { return keyframe.time == time; });
+    if (it != keyframes.end()) {
+        it->value = value;
+    }
 }

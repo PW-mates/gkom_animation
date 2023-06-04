@@ -16,6 +16,9 @@ OpenGLWindow::OpenGLWindow()
     cameraDirection = glm::vec3(0, 0, -1);
     cameraUp = glm::vec3(0, 1, 0);
     cameraSpeed = 0.01f;
+    isDragging = false;
+
+    startTime = getCurrentTime();
 }
 
 OpenGLWindow::~OpenGLWindow()
@@ -55,6 +58,10 @@ bool OpenGLWindow::InitWindow()
 
     glfwSetFramebufferSizeCallback(_window, FramebufferSizeChangeCallback);
     glfwSetScrollCallback(_window, MouseScrollCallback);
+
+    
+
+    return true;
 }
 
 void OpenGLWindow::InitScene()
@@ -64,21 +71,17 @@ void OpenGLWindow::InitScene()
     phongProgram.Load("phongshader.vs", "phongshader.fs");
 
     boxVAO = LoadBox(&boxVAOPrimitive, &boxVAOVertexCount);
+    boxMaterial = DefaultMtl();
 
-    cubeVAO = LoadObj("..\\Resources\\Shaders\\sphere.obj", &cubeVAOPrimitive, &cubeVAOVertexCount);
+    cubeVAO = LoadObj("..\\Resources\\Models\\sphere.obj", &cubeVAOPrimitive, &cubeVAOVertexCount, &cubeMaterial);
+
+    pointLight = DefaultPointLight();
 }
 
 void OpenGLWindow::MainLoop()
 {
     glClearColor(0.1f, 0.2f, 0.3f, 0.0f);
     glEnable(GL_DEPTH_TEST);
-
-
-    // TODO: Load from material file
-    glm::vec3 lightAmbient(1.0f, 1.0f, 1.0f);
-    glm::vec3 lightDiffuse(1.0f, 1.0f, 1.0f);
-    glm::vec3 lightPos(0.0f, 0.0f, 15.0f);
-    glm::vec3 lightColor(1.0f, 0.5f, 1.0f);
     
     Program lightProgram;
     bool useTransformations = false;
@@ -100,46 +103,31 @@ void OpenGLWindow::MainLoop()
         }
         else {
             lightProgram = phongProgram;
-            // Add Phong shader
             phongProgram.Activate();
-
             glUniformMatrix4fv(phongProgram.GetUniformID("uCameraMatrix"), 1, GL_FALSE, glm::value_ptr(cameraMatrix));
             glUniformMatrix4fv(phongProgram.GetUniformID("uProjectionMatrix"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
-
-
-            //glUniformMatrix4fv(phongProgram.GetUniformID("uLightPosition"), 1, GL_FALSE, glm::value_ptr(lightPos));
-            //glUniformMatrix4fv(phongProgram.GetUniformID("uLightAmbient"), 1, GL_FALSE, glm::value_ptr(lightAmbient));
-            //glUniformMatrix4fv(phongProgram.GetUniformID("uLightDiffuse"), 1, GL_FALSE, glm::value_ptr(lightDiffuse));
-            glUniform3fv(phongProgram.GetUniformID("uLightPosition"), 1, glm::value_ptr(lightPos));
-            glUniform3fv(phongProgram.GetUniformID("uLightAmbient"), 1, glm::value_ptr(lightAmbient));
-            glUniform3fv(phongProgram.GetUniformID("uLightDiffuse"), 1, glm::value_ptr(lightDiffuse));
             glUniform3fv(phongProgram.GetUniformID("uViewPos"), 1, glm::value_ptr(cameraPosition));
-            
-            //glUniformMatrix4fv(phongProgram.GetUniformID("uViewPos"), 1, GL_FALSE, glm::value_ptr(cameraPosition));
-            glUniform3fv(phongProgram.GetUniformID("uLightColor"), 1, glm::value_ptr(lightColor));
-        }
+            // glUniformMatrix4fv(phongProgram.GetUniformID("uViewPos"), 1, GL_FALSE, glm::value_ptr(cameraPosition));
 
-        
+            // Update light properties
+            
+            glUniform3fv(phongProgram.GetUniformID("uLight.position"), 1, glm::value_ptr(pointLight.position));
+            glUniform3fv(phongProgram.GetUniformID("uLight.ambient"), 1, glm::value_ptr(pointLight.ambient));
+            glUniform3fv(phongProgram.GetUniformID("uLight.diffuse"), 1, glm::value_ptr(pointLight.diffuse));
+            glUniform3fv(phongProgram.GetUniformID("uLight.specular"), 1, glm::value_ptr(pointLight.specular));
+            glUniform3fv(phongProgram.GetUniformID("uLight.color"), 1, glm::value_ptr(pointLight.color));
+        }
 
         for (int i = -2; i <= 2; i++)
         {
             for (int j = -2; j <= 2; j++)
             {
-                modelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(i * 3.0f, j * 3.0f, 0.0f));
-
-                glUniformMatrix4fv(lightProgram.GetUniformID("uModelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
-
-                glBindVertexArray(boxVAO);
-
-                glDrawArrays(boxVAOPrimitive, 0, boxVAOVertexCount);
+                renderObject(lightProgram, boxVAO, boxVAOPrimitive, boxVAOVertexCount, glm::vec3(i * 3.0f, j * 3.0f, 0.0f), boxMaterial);
             }
         }
 
-        modelMatrix = glm::translate(glm::mat4(2.0f), glm::vec3(0 * 3.0f, 0 * 3.0f, 10.0f));
-        glUniformMatrix4fv(lightProgram.GetUniformID("uModelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
-        glBindVertexArray(cubeVAO);
-        glDrawArrays(cubeVAOPrimitive, 0, cubeVAOVertexCount);
-
+        renderObject(lightProgram, cubeVAO, cubeVAOPrimitive, cubeVAOVertexCount, glm::vec3(0.0f, 0.0f, 10.0f), cubeMaterial);
+        
 
         processInput();
         processMouseInput();
@@ -147,6 +135,19 @@ void OpenGLWindow::MainLoop()
         glfwSwapBuffers(_window);
         glfwPollEvents();
     }
+}
+
+void OpenGLWindow::renderObject(Program& program, GLuint VAO, GLenum primitive, unsigned int count, glm::vec3 position, Material material)
+{
+    modelMatrix = glm::translate(glm::mat4(2.0f), position);
+    glUniformMatrix4fv(program.GetUniformID("uModelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
+    glUniform3fv(program.GetUniformID("uMaterial.ambient"), 1, glm::value_ptr(cubeMaterial.ambient));
+    glUniform3fv(program.GetUniformID("uMaterial.diffuse"), 1, glm::value_ptr(cubeMaterial.diffuse));
+    glUniform3fv(program.GetUniformID("uMaterial.specular"), 1, glm::value_ptr(cubeMaterial.specular));
+    glUniform1f(program.GetUniformID("uMaterial.shininess"), cubeMaterial.shininess);
+
+    glBindVertexArray(VAO);
+    glDrawArrays(primitive, 0, count);
 }
 
 void OpenGLWindow::processInput()
@@ -255,10 +256,6 @@ void OpenGLWindow::processMouseInput() {
 			lastMouseY = mouseY;
 
 			double yawSign = cameraUp.y < 0 ? -1.0f : 1.0f;
-
-            std::cout << "cameraDirection.x" << cameraDirection.x << std::endl;
-            std::cout << "cameraDirection.y" << cameraDirection.y << std::endl;
-            std::cout << "cameraDirection.z" << cameraDirection.z << std::endl;
 
             if (cameraDirection.x != 0)
             {
