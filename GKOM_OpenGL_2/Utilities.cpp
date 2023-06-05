@@ -386,7 +386,7 @@ glm::vec3 Animation::evaluate(float time) {
         [](const Keyframe& keyframe, float time) { return keyframe.time < time; });
     auto prev_keyframe = next_keyframe - 1;
 
-    float t = (time - prev_keyframe->time) / (next_keyframe->time - next_keyframe->time);
+    float t = (time - prev_keyframe->time) / (next_keyframe->time - prev_keyframe->time);
     return glm::mix(prev_keyframe->value, next_keyframe->value, t);
 }
 

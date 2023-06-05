@@ -11,6 +11,8 @@
 
 #include "Program.h"
 #include "Utilities.h"
+#include "Object.h"
+
 
 class OpenGLWindow
 {
@@ -36,18 +38,24 @@ private:
 	GLenum boxVAOPrimitive;
 	Material boxMaterial;
 
+	std::vector<Object> objects;
+
 	GLuint cubeVAO;
 	GLenum cubeVAOPrimitive;
 	Material cubeMaterial;
+
 	PointLight pointLight;
 
 	unsigned int boxVAOVertexCount;
 	unsigned int cubeVAOVertexCount;
 
-	void renderObject(Program& program, GLuint VAO, GLenum primitive, unsigned int count, glm::vec3 position, Material material);
+	void renderObject(Program& program, GLuint VAO, GLenum primitive, unsigned int count, Material material, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale);
 
 	void processInput();
 	void processMouseInput();
+
+	void capture_frame(const std::string& filename);
+	void renderToFile(const std::string& filename);
 
 	glm::vec2 windowResolution;
 	float fieldOfView;
@@ -62,10 +70,12 @@ private:
 	float cameraSpeed;
 
 	uint64_t startTime;
+	unsigned int totalFrames;
 
 	// Mouse input
 	bool isDragging;
 	double lastMouseX;
 	double lastMouseY;
 
+	RenderConfig renderConfig;
 };

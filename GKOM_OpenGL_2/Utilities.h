@@ -17,6 +17,9 @@
 #include <filesystem>
 #include <chrono>
 
+#include <sys/stat.h>
+
+
 struct Material {
     std::string name;
     glm::vec3 ambient;
@@ -36,6 +39,16 @@ struct PointLight {
 struct Keyframe {
     float time;
     glm::vec3 value;
+};
+
+struct RenderConfig {
+    unsigned int currentFrame;
+    unsigned int frameRate;
+    unsigned int frameCount;
+    unsigned int stepPerFrame;
+    std::string tempFolder;
+    std::string outputName;
+    bool rendering = false;
 };
 
 uint64_t getCurrentTime();

@@ -151,13 +151,17 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Object.cpp" />
     <ClCompile Include="OpenGLWindow.cpp" />
     <ClCompile Include="Program.cpp" />
     <ClCompile Include="Utilities.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\stb_image.h" />
+    <ClInclude Include="Object.h" />
     <ClInclude Include="OpenGLWindow.h" />
     <ClInclude Include="Program.h" />
+    <ClInclude Include="stb_image_write.h" />
     <ClInclude Include="Utilities.h" />
   </ItemGroup>
   <ItemGroup>

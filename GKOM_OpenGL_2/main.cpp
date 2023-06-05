@@ -6,10 +6,10 @@
 // 3. interpretation of material properties : diffuse, specular - done
 // 4. point light support - the ability to move the light, edit
 //  properties of light - done
-// 5. the ability to make a simple animation :
+// 5. the ability to make a simple animation:
 //  (a)inserting and editing keyframes for transformations(translation,
-//      rotation, scaling)
-//  (b)fixed and linear interpolation between frames
+//      rotation, scaling) - done
+//  (b)fixed and linear interpolation between frames - done
 // 6. perspective camera - the ability to move around the stage and rotate
 // 7. the ability to render animation to a video file
 
