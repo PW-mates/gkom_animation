@@ -102,117 +102,181 @@
               placeholder="Enter name"
             />
           </div>
+          <div class="form-group row" id="lightProps">
+            <div class="col lightAmbient">
+              <label>Ambient</label>
+              <div class="row" style="margin: 0">
+                <input
+                  type="text"
+                  class="form-control col-sm-4 x"
+                  placeholder="X"
+                  onchange="updateLight()"
+                />
+                <input
+                  type="text"
+                  class="form-control col-sm-4 y"
+                  placeholder="Y"
+                  onchange="updateLight()"
+                />
+                <input
+                  type="text"
+                  class="form-control col-sm-4 z"
+                  placeholder="Z"
+                  onchange="updateLight()"
+                />
+              </div>
+            </div>
+            <div class="col lightDiffuse">
+              <label>Diffuse</label>
+              <div class="row" style="margin: 0">
+                <input
+                  type="text"
+                  class="form-control col-sm-4 x"
+                  placeholder="X"
+                  onchange="updateLight()"
+                />
+                <input
+                  type="text"
+                  class="form-control col-sm-4 y"
+                  placeholder="Y"
+                  onchange="updateLight()"
+                />
+                <input
+                  type="text"
+                  class="form-control col-sm-4 z"
+                  placeholder="Z"
+                  onchange="updateLight()"
+                />
+              </div>
+            </div>
+            <div class="col lightSpecular">
+              <label>Specular</label>
+              <div class="row" style="margin: 0">
+                <input
+                  type="text"
+                  class="form-control col-sm-4 x"
+                  placeholder="X"
+                  onchange="updateLight()"
+                />
+                <input
+                  type="text"
+                  class="form-control col-sm-4 y"
+                  placeholder="Y"
+                  onchange="updateLight()"
+                />
+                <input
+                  type="text"
+                  class="form-control col-sm-4 z"
+                  placeholder="Z"
+                  onchange="updateLight()"
+                />
+              </div>
+            </div>
+            <div class="col lightColor">
+              <label>Color</label>
+              <input
+                type="text"
+                class="form-control"
+                id="lightColor"
+                placeholder="#ffffff"
+                onchange="updateLight()"
+              />
+            </div>
+          </div>
           <h5 class="typography" style="margin-top: 30px">
             Keyframes
             <small class="text-muted" onclick="addKeyframe()"
               >Add keyframe</small
             >
           </h5>
-          <ul class="list-group" id="listKeyframes">
-            <li
-              class="list-group-item d-flex justify-content-between align-items-center"
-            >
-              Frame 1
-              <span>
-                <span class="badge badge-primary badge-pill">Position</span>
-                <span class="badge badge-primary badge-pill">Rotation</span>
-                <span class="badge badge-primary badge-pill">Scale</span>
-              </span>
-            </li>
-            <li
-              class="list-group-item d-flex justify-content-between align-items-center"
-            >
-              Frame 100
-              <span>
-                <span class="badge badge-primary badge-pill">Position</span>
-                <span class="badge badge-primary badge-pill">Rotation</span>
-                <span class="badge badge-primary badge-pill">Scale</span>
-              </span>
-            </li>
-            <li
-              class="list-group-item d-flex justify-content-between align-items-center"
-            >
-              Frame 200
-              <span>
-                <span class="badge badge-primary badge-pill">Position</span>
-                <span class="badge badge-primary badge-pill">Rotation</span>
-                <span class="badge badge-primary badge-pill">Scale</span>
-              </span>
-            </li>
-          </ul>
+          <ul class="list-group" id="listKeyframes"></ul>
 
           <h5 class="typography" style="margin-top: 30px">
             Keyframe Properties
           </h5>
-          <form id="keyframeProps">
-            <label>Position</label>
-            <div class="row">
-              <div class="col">
+          <div class="form-group row" id="keyframeProps">
+            <div class="col">
+              <label>Position</label>
+              <div class="row framePosition" style="margin: 0">
                 <input
                   type="text"
-                  class="form-control"
+                  class="form-control col-sm-4"
                   placeholder="X"
-                  axis="X"
                 />
-              </div>
-              <div class="col">
                 <input
                   type="text"
-                  class="form-control"
+                  class="form-control col-sm-4"
                   placeholder="Y"
-                  axis="Y"
                 />
-              </div>
-              <div class="col">
                 <input
                   type="text"
-                  class="form-control"
+                  class="form-control col-sm-4"
                   placeholder="Z"
-                  axis="Z"
                 />
               </div>
             </div>
-
-            <label>Rotation</label>
-            <div class="row">
-              <div class="col">
-                <input type="text" class="form-control" placeholder="X" />
-              </div>
-              <div class="col">
-                <input type="text" class="form-control" placeholder="Y" />
-              </div>
-              <div class="col">
-                <input type="text" class="form-control" placeholder="Z" />
-              </div>
-            </div>
-
-            <label>Scale</label>
-            <div class="row">
-              <div class="col">
-                <input type="text" class="form-control" placeholder="X" />
-              </div>
-              <div class="col">
-                <input type="text" class="form-control" placeholder="Y" />
-              </div>
-              <div class="col">
-                <input type="text" class="form-control" placeholder="Z" />
+            <div class="col">
+              <label>Rotation</label>
+              <div class="row frameRotation" style="margin: 0">
+                <input
+                  type="text"
+                  class="form-control col-sm-4"
+                  placeholder="X"
+                />
+                <input
+                  type="text"
+                  class="form-control col-sm-4"
+                  placeholder="Y"
+                />
+                <input
+                  type="text"
+                  class="form-control col-sm-4"
+                  placeholder="Z"
+                />
               </div>
             </div>
-          </form>
+            <div class="col">
+              <label>Scale</label>
+              <div class="row frameScale" style="margin: 0">
+                <input
+                  type="text"
+                  class="form-control col-sm-4"
+                  placeholder="X"
+                />
+                <input
+                  type="text"
+                  class="form-control col-sm-4"
+                  placeholder="Y"
+                />
+                <input
+                  type="text"
+                  class="form-control col-sm-4"
+                  placeholder="Z"
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="col-md-4 card" style="padding: 30px">
-          <label for="durationRange" class="form-label" id="frameLabel">Frame: 0</label>
-          <input type="range" class="form-range" id="durationRange" onchange="changeFrame()" />
+          <label for="durationRange" class="form-label" id="frameLabel"
+            >Frame: 0</label
+          >
+          <input
+            type="range"
+            class="form-range"
+            id="durationRange"
+            onchange="changeFrame()"
+          />
 
           <img src="https://placehold.co/600x400" style="width: 100%" />
 
           <div class="row">
             <div class="col">
-              <button class="btn btn-info btn-block">Preview</button>
+              <button class="btn btn-info btn-block" onclick="preview()">Preview</button>
             </div>
             <div class="col">
-              <button class="btn btn-success btn-block">Render</button>
+              <button class="btn btn-success btn-block" onclick="render()">Render</button>
             </div>
           </div>
         </div>
@@ -287,6 +351,7 @@
       integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
       crossorigin="anonymous"
     ></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="./index.js"></script>
   </body>
 </html>

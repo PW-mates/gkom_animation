@@ -5,6 +5,26 @@ let folderOpened = false;
 let selectedObject = null;
 let selectedKeyframe = null;
 
+function componentToHex(c) {
+  var hex = c.toString(16);
+  return hex.length == 1 ? "0" + hex : hex;
+}
+
+function rgbToHex(r, g, b) {
+  return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+}
+
+function hexToRgb(hex) {
+  var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result
+    ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16),
+      }
+    : null;
+}
+
 const openFile = async (ext = "*") => {
   return new Promise((resolve) => {
     let file = document.createElement("input");
@@ -208,6 +228,10 @@ function addLight() {
     id: "light-" + animation.objects.length,
     type: "light",
     name: "Light",
+    ambient: [0.2, 0.2, 0.2],
+    diffuse: [0.8, 0.8, 0.8],
+    specular: [0.8, 0.8, 0.8],
+    color: [1, 1, 1],
     keyframes: {
       0: {
         position: [0, 0, 0],
@@ -303,6 +327,26 @@ function reloadProperties() {
     return;
   }
   $("#objProperty #objectName").val(obj.name);
+  if (obj.type == "light") {
+    $("#objProperty #lightProps").show();
+    $("#objProperty #lightProps .lightAmbient .x").val(obj.ambient[0]);
+    $("#objProperty #lightProps .lightAmbient .y").val(obj.ambient[1]);
+    $("#objProperty #lightProps .lightAmbient .z").val(obj.ambient[2]);
+
+    $("#objProperty #lightProps .lightDiffuse .x").val(obj.diffuse[0]);
+    $("#objProperty #lightProps .lightDiffuse .y").val(obj.diffuse[1]);
+    $("#objProperty #lightProps .lightDiffuse .z").val(obj.diffuse[2]);
+
+    $("#objProperty #lightProps .lightSpecular .x").val(obj.specular[0]);
+    $("#objProperty #lightProps .lightSpecular .y").val(obj.specular[1]);
+    $("#objProperty #lightProps .lightSpecular .z").val(obj.specular[2]);
+
+    $("#objProperty #lightProps .lightColor input").val(
+      rgbToHex(obj.color[0] * 255, obj.color[1] * 255, obj.color[2] * 255)
+    );
+  } else {
+    $("#objProperty #lightProps").hide();
+  }
   $("#objProperty #listKeyframes").empty();
   for (let keyframe in obj.keyframes) {
     let keyframeData = obj.keyframes[keyframe];
@@ -337,67 +381,91 @@ function reloadProperties() {
     );
     let keyframeData = obj.keyframes[selectedKeyframe];
     let prevKeyframe = getPreviousKeyframe(selectedKeyframe);
-    let prevKeyframeData = obj.keyframes[prevKeyframe];
     $("#objProperty #keyframeProps").empty();
-    $("#objProperty #keyframeProps").append("<label>Position</label>");
-    $("#objProperty #keyframeProps").append(` <div class="row position">
-        <div class="col">
-            <input type="text" class="form-control" placeholder="X" axis="X" value="${
-              keyframeData.position ? keyframeData.position[0] : ""
-            }" onchange="updateKeyframe()">
-        </div>
-        <div class="col">
-            <input type="text" class="form-control" placeholder="Y" axis="Y" value="${
-              keyframeData.position ? keyframeData.position[1] : ""
-            }" onchange="updateKeyframe()">
-        </div>
-        <div class="col">
-            <input type="text" class="form-control" placeholder="Z" axis="Z" value="${
-              keyframeData.position ? keyframeData.position[2] : ""
-            }" onchange="updateKeyframe()">
-        </div>
-    </div>`);
+    $("#objProperty #keyframeProps").append(`<div class="col">
+    <label>Position</label>
+    <div class="row framePosition" style="margin: 0">
+      <input
+        type="text"
+        class="form-control col-sm-4"
+        placeholder="X" value="${
+          keyframeData.position ? keyframeData.position[0] : ""
+        }" onchange="updateKeyframe()"
+      />
+      <input
+        type="text"
+        class="form-control col-sm-4"
+        placeholder="Y" value="${
+          keyframeData.position ? keyframeData.position[1] : ""
+        }" onchange="updateKeyframe()"
+      />
+      <input
+        type="text"
+        class="form-control col-sm-4"
+        placeholder="Z" value="${
+          keyframeData.position ? keyframeData.position[2] : ""
+        }" onchange="updateKeyframe()"
+      />
+    </div>
+  </div>`);
+
     if (selectedObjectData.type != "light") {
-      $("#objProperty #keyframeProps").append("<label>Rotation</label>");
-      $("#objProperty #keyframeProps").append(` <div class="row rotation">
-            <div class="col">
-                <input type="text" class="form-control" placeholder="X" axis="X" value="${
-                  keyframeData.rotation ? keyframeData.rotation[0] : ""
-                }" onchange="updateKeyframe()">
-            </div>
-            <div class="col">
-                <input type="text" class="form-control" placeholder="Y" axis="Y" value="${
-                  keyframeData.rotation ? keyframeData.rotation[1] : ""
-                }" onchange="updateKeyframe()">
-            </div>
-            <div class="col">
-                <input type="text" class="form-control" placeholder="Z" axis="Z" value="${
-                  keyframeData.rotation ? keyframeData.rotation[2] : ""
-                }" onchange="updateKeyframe()">
-            </div>
+      $("#objProperty #keyframeProps").append(`<div class="col">
+        <label>Rotation</label>
+        <div class="row frameRotation" style="margin: 0">
+            <input
+            type="text"
+            class="form-control col-sm-4"
+            placeholder="X" value="${
+              keyframeData.rotation ? keyframeData.rotation[0] : ""
+            }" onchange="updateKeyframe()"
+            />
+            <input
+            type="text"
+            class="form-control col-sm-4"
+            placeholder="Y" value="${
+              keyframeData.rotation ? keyframeData.rotation[1] : ""
+            }" onchange="updateKeyframe()"
+            />
+            <input
+            type="text"
+            class="form-control col-sm-4"
+            placeholder="Z" value="${
+              keyframeData.rotation ? keyframeData.rotation[2] : ""
+            }" onchange="updateKeyframe()"
+            />
+        </div>
         </div>`);
     }
     if (
       selectedObjectData.type != "camera" &&
       selectedObjectData.type != "light"
     ) {
-      $("#objProperty #keyframeProps").append("<label>Scale</label>");
-      $("#objProperty #keyframeProps").append(` <div class="row scale">
-            <div class="col">
-                <input type="text" class="form-control" placeholder="X" axis="X" value="${
-                  keyframeData.scale ? keyframeData.scale[0] : ""
-                }" onchange="updateKeyframe()">
-            </div>
-            <div class="col">
-                <input type="text" class="form-control" placeholder="Y" axis="Y" value="${
-                  keyframeData.scale ? keyframeData.scale[1] : ""
-                }" onchange="updateKeyframe()">
-            </div>
-            <div class="col">
-                <input type="text" class="form-control" placeholder="Z" axis="Z" value="${
-                  keyframeData.scale ? keyframeData.scale[2] : ""
-                }" onchange="updateKeyframe()">
-            </div>
+      $("#objProperty #keyframeProps")
+        .append(`<div class="col"><label>Scale</label>
+        <div class="row frameScale" style="margin: 0">
+        <input
+        type="text"
+        class="form-control col-sm-4"
+        placeholder="X" value="${
+          keyframeData.scale ? keyframeData.scale[0] : ""
+        }" onchange="updateKeyframe()"
+        />
+        <input
+        type="text"
+        class="form-control col-sm-4"
+        placeholder="Y" value="${
+          keyframeData.scale ? keyframeData.scale[1] : ""
+        }" onchange="updateKeyframe()"
+        />
+        <input
+        type="text"
+        class="form-control col-sm-4"
+        placeholder="Z" value="${
+          keyframeData.scale ? keyframeData.scale[2] : ""
+        }" onchange="updateKeyframe()"
+        />
+        </div>
         </div>`);
     }
   } else {
@@ -465,4 +533,48 @@ function updateKeyframe() {
   }
   reloadProperties();
   saveAnimation();
+}
+
+function updateLight() {
+  let light = animation.objects.find((o) => o.id === selectedObject);
+  let color = $("#objProperty #lightProps .lightColor input").val();
+  color = hexToRgb(color);
+  light.color = [color.r / 255, color.g / 255, color.b / 255];
+  light.ambient = [
+    $("#objProperty #lightProps .lightAmbient .x").val(),
+    $("#objProperty #lightProps .lightAmbient .y").val(),
+    $("#objProperty #lightProps .lightAmbient .z").val(),
+  ];
+  light.diffuse = [
+    $("#objProperty #lightProps .lightDiffuse .x").val(),
+    $("#objProperty #lightProps .lightDiffuse .y").val(),
+    $("#objProperty #lightProps .lightDiffuse .z").val(),
+  ];
+  light.specular = [
+    $("#objProperty #lightProps .lightSpecular .x").val(),
+    $("#objProperty #lightProps .lightSpecular .y").val(),
+    $("#objProperty #lightProps .lightSpecular .z").val(),
+  ];
+  reloadProperties();
+  saveAnimation();
+}
+
+async function getDirectoryTree() {
+  let files = {};
+  for await (let entry of directoryHandle.values()) {
+    if (entry.kind === "file" && !entry.name.startsWith(".")) {
+      files[entry.name] = await(await entry.getFile()).text();
+    }
+  }
+  return files;
+}
+
+async function preview() {
+  let result = await axios.post('/api/preview', await getDirectoryTree());
+  console.log(result);
+}
+
+async function render() {
+  let result = await axios.post('/api/render', await getDirectoryTree());
+  console.log(result);
 }

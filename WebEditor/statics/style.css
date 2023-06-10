@@ -1,0 +1,13 @@
+#lightProps {
+    
+}
+
+#lightProps .col, #keyframeProps .col {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+#lightProps .col input, #keyframeProps .col input {
+    padding-left: 5px;
+    padding-right: 5px;
+}
