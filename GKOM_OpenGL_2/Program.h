@@ -14,7 +14,11 @@ public:
 	Program();
 
 	static void setProgramsDirectory(std::string programDirectory);
+	static void setPreview(bool preview);
 	static std::string getProgramsDirectory();
+	static bool getPreview();
+	static void setFrame(int frame);
+	static int getFrame();
 
 	GLuint GetID();
 
@@ -40,6 +44,7 @@ private:
 	std::map<std::string, GLuint> _uniformsID;
 
 	static std::string _programsDirectory;
-	
+	static bool _preview;
+	static int _frame;
 };
 

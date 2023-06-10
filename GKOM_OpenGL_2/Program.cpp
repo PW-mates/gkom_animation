@@ -12,9 +12,29 @@ void Program::setProgramsDirectory(std::string programDirectory)
     _programsDirectory = programDirectory;
 }
 
+void Program::setPreview(bool preview)
+{
+    _preview = preview;
+}
+
+void Program::setFrame(int frame)
+{
+    _frame = frame;
+}
+
 std::string Program::getProgramsDirectory()
 {
     return _programsDirectory;
+}
+
+bool Program::getPreview()
+{
+    return _preview;
+}
+
+int Program::getFrame()
+{
+    return _frame;
 }
 
 GLuint Program::GetID()

@@ -36,6 +36,12 @@ struct PointLight {
     glm::vec3 color;
 };
 
+struct Camera {
+    glm::vec3 position;
+    glm::vec3 direction;
+    glm::vec3 up;
+};
+
 struct Keyframe {
     float time;
     glm::vec3 value;

@@ -16,16 +16,17 @@ OpenGLWindow::OpenGLWindow()
 {
 	_window = nullptr;
 
-    boxVAO = 0;
-
+    // Default parameters
+    cameraSpeed = 0.01f;
     windowResolution = glm::vec2(1200, 900);
     fieldOfView = 45;
+    isDragging = false;
+
+    boxVAO = 0;
 
     cameraPosition = glm::vec3(0, 0, 20);
     cameraDirection = glm::vec3(0, 0, -1);
     cameraUp = glm::vec3(0, 1, 0);
-    cameraSpeed = 0.01f;
-    isDragging = false;
 
     startTime = getCurrentTime();
     totalFrames = 5000;

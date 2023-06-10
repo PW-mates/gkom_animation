@@ -1,4 +1,5 @@
 #include "OpenGLWindow.h"
+#include <iostream>
 
 // Remaining task list:
 // 1. support for basic input file type with 3D model : obj - done
@@ -13,15 +14,45 @@
 // 6. perspective camera - the ability to move around the stage and rotate
 // 7. the ability to render animation to a video file
 
-
-int main()
+int main(int argc, char **argv)
 {
-    Program::setProgramsDirectory("../Resources/Shaders/");
-    
+    std:char *sceneFolder;
+    bool preview = true;
+    int frame = 0;
+
+    if (argc < 2)
+    {
+        std::cout << "Usage: " << argv[0] << " <path to scene file>"
+                  << " [preview/render]"
+                  << " [frame=0]" << std::endl;
+        return 1;
+    } else {
+        sceneFolder = argv[1];
+    }
+    if (argc >= 3)
+    {
+        if (strcmp(argv[2], "preview") == 0)
+        {
+            preview = true;
+        }
+        else if (strcmp(argv[2], "render") == 0)
+        {
+            preview = false;
+        }
+    }
+    if (argc >= 4)
+    {
+        frame = atoi(argv[3]);
+    }
+
+    Program::setProgramsDirectory(sceneFolder);
+    Program::setPreview(preview);
+    Program::setFrame(frame);
+
     OpenGLWindow openglWindow;
 
     openglWindow.InitWindow();
-    
+
     openglWindow.InitScene();
 
     openglWindow.MainLoop();
