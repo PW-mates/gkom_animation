@@ -1,7 +1,8 @@
 #pragma once
-#include <GL/glew.h>
-#include "Utilities.h"
 
+#include <GL/glew.h>
+#include "Animation.h"
+#include "Material.h"
 
 class Object
 {

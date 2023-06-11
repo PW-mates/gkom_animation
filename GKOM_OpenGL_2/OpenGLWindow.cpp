@@ -22,14 +22,11 @@ OpenGLWindow::OpenGLWindow()
     fieldOfView = 45;
     isDragging = false;
 
-    boxVAO = 0;
-
     cameraPosition = glm::vec3(0, 0, 20);
     cameraDirection = glm::vec3(0, 0, -1);
     cameraUp = glm::vec3(0, 1, 0);
 
     startTime = getCurrentTime();
-    totalFrames = 5000;
     objects = std::vector<Object>();
 }
 
@@ -76,27 +73,13 @@ bool OpenGLWindow::InitWindow()
 
 void OpenGLWindow::InitScene()
 {
-    transformationProgram.Load("transformationshader.vs", "transformationshader.fs");
+    transformationProgram.Load("..\\Resources\\Shaders\\transformationshader.vs", "..\\Resources\\Shaders\\transformationshader.fs");
+    phongProgram.Load("..\\Resources\\Shaders\\phongshader.vs", "..\\Resources\\Shaders\\phongshader.fs");
 
-    phongProgram.Load("phongshader.vs", "phongshader.fs");
-
-    boxVAO = LoadBox(&boxVAOPrimitive, &boxVAOVertexCount);
-    boxMaterial = DefaultMtl();
-
-    cubeVAO = LoadObj("..\\Resources\\Models\\sphere.obj", &cubeVAOPrimitive, &cubeVAOVertexCount, &cubeMaterial);
-    Object obj = Object(cubeVAO, cubeVAOPrimitive, cubeVAOVertexCount, cubeMaterial, glm::vec3(0.0f, 0.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f));
-    obj.positionAnimation.insertKeyframe(1000, glm::vec3(0, 0, 15));
-    obj.positionAnimation.insertKeyframe(3000, glm::vec3(10, 0, 0));
-    obj.positionAnimation.insertKeyframe(5000, glm::vec3(0, 0, 10));
-    obj.rotationAnimation.insertKeyframe(1000, glm::vec3(0, 0, 0));
-    obj.rotationAnimation.insertKeyframe(3000, glm::vec3(0, 0, 90));
-    obj.rotationAnimation.insertKeyframe(5000, glm::vec3(0, 90, 0));
-    obj.scaleAnimation.insertKeyframe(1000, glm::vec3(1, 1, 1));
-    obj.scaleAnimation.insertKeyframe(3000, glm::vec3(0, 0, 0));
-    obj.scaleAnimation.insertKeyframe(5000, glm::vec3(3, 3, 3));
-    objects.push_back(obj);
-
-    pointLight = DefaultPointLight();
+    pointLights = std::vector<PointLight>();
+    objects = std::vector<Object>();
+    perspectiveCamera = false;
+    LoadAnimation(Program::getProgramsDirectory(), &appConfig, &camera, &pointLights, &objects);
 }
 
 void OpenGLWindow::MainLoop()
@@ -107,22 +90,48 @@ void OpenGLWindow::MainLoop()
     Program lightProgram;
     bool useTransformations = false;
 
+    if (Program::getWorkingMode() == WorkingMode::Preview || Program::getWorkingMode() == WorkingMode::Render) {
+        renderConfig.currentFrame = 0;
+        renderConfig.tempFolder = Program::getOutputDirectory() + "\\temp";
+        struct stat info;
+        if (stat(renderConfig.tempFolder.c_str(), &info) == -1) {
+            std::filesystem::create_directory(renderConfig.tempFolder);
+        }
+        renderConfig.outputName = Program::getOutputDirectory() + "\\output.mp4";
+        renderConfig.rendering = true;
+        if (Program::getWorkingMode() == WorkingMode::Preview) {
+            renderConfig.frameRate = appConfig.previewFps;
+		}
+        else {
+            renderConfig.frameRate = appConfig.renderFps;
+        }
+        renderConfig.frameCount = appConfig.duration / 1000 * renderConfig.frameRate;
+        renderConfig.stepPerFrame = appConfig.duration / renderConfig.frameCount;
+    }
+
     while (!glfwWindowShouldClose(_window))
     {
-        if (getCurrentTime() - startTime > totalFrames) {
+        if (getCurrentTime() - startTime > appConfig.duration) {
 			startTime = getCurrentTime();
 		}
         float currentFrame = (getCurrentTime() - startTime);
         if (renderConfig.rendering) {
             currentFrame = renderConfig.currentFrame * renderConfig.stepPerFrame;
         }
-        
+        else if (Program::getWorkingMode() == WorkingMode::Frame) {
+			currentFrame = Program::getFrame();
+		}
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         projectionMatrix = glm::perspective(glm::radians(fieldOfView), windowResolution.x / windowResolution.y, 0.1f, 100.0f);
 
-        cameraMatrix = glm::lookAt(cameraPosition, cameraPosition + cameraDirection, cameraUp);
+        if (perspectiveCamera) {
+            cameraMatrix = glm::lookAt(cameraPosition, cameraPosition + cameraDirection, cameraUp);
+        }
+        else {
+            cameraMatrix = glm::lookAt(camera.positionAnimation.evaluate(currentFrame), camera.positionAnimation.evaluate(currentFrame) + camera.directionAnimation.evaluate(currentFrame), camera.up);
+        }
 
         if (useTransformations) {
             lightProgram = transformationProgram;
@@ -136,27 +145,21 @@ void OpenGLWindow::MainLoop()
             phongProgram.Activate();
             glUniformMatrix4fv(phongProgram.GetUniformID("uCameraMatrix"), 1, GL_FALSE, glm::value_ptr(cameraMatrix));
             glUniformMatrix4fv(phongProgram.GetUniformID("uProjectionMatrix"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
-            glUniform3fv(phongProgram.GetUniformID("uViewPos"), 1, glm::value_ptr(cameraPosition));
+            glUniform3fv(phongProgram.GetUniformID("uViewPos"), 1, glm::value_ptr(perspectiveCamera ? cameraPosition : camera.positionAnimation.evaluate(currentFrame)));
             // glUniformMatrix4fv(phongProgram.GetUniformID("uViewPos"), 1, GL_FALSE, glm::value_ptr(cameraPosition));
 
             // Update light properties
-            
-            glUniform3fv(phongProgram.GetUniformID("uLight.position"), 1, glm::value_ptr(pointLight.position));
-            glUniform3fv(phongProgram.GetUniformID("uLight.ambient"), 1, glm::value_ptr(pointLight.ambient));
-            glUniform3fv(phongProgram.GetUniformID("uLight.diffuse"), 1, glm::value_ptr(pointLight.diffuse));
-            glUniform3fv(phongProgram.GetUniformID("uLight.specular"), 1, glm::value_ptr(pointLight.specular));
-            glUniform3fv(phongProgram.GetUniformID("uLight.color"), 1, glm::value_ptr(pointLight.color));
+            for (auto light : pointLights) {
+                glUniform3fv(phongProgram.GetUniformID("uLight.position"), 1, glm::value_ptr(light.positionAnimation.evaluate(currentFrame)));
+                glUniform3fv(phongProgram.GetUniformID("uLight.ambient"), 1, glm::value_ptr(light.ambient));
+                glUniform3fv(phongProgram.GetUniformID("uLight.diffuse"), 1, glm::value_ptr(light.diffuse));
+                glUniform3fv(phongProgram.GetUniformID("uLight.specular"), 1, glm::value_ptr(light.specular));
+                glUniform3fv(phongProgram.GetUniformID("uLight.color"), 1, glm::value_ptr(light.color));
+            }
         }
 
         glm::vec3 defaultScaleVector = glm::vec3(1.0f, 1.0f, 1.0f);
         glm::vec3 defaultRotationVector = glm::vec3(0.0f, 0.0f, 0.0f);
-        for (int i = -2; i <= 2; i++)
-        {
-            for (int j = -2; j <= 2; j++)
-            {
-                renderObject(lightProgram, boxVAO, boxVAOPrimitive, boxVAOVertexCount, boxMaterial, glm::vec3(i * 3.0f, j * 3.0f, 0.0f), defaultRotationVector, defaultScaleVector);
-            }
-        }
 
         // renderObject(lightProgram, cubeVAO, cubeVAOPrimitive, cubeVAOVertexCount, glm::vec3(0.0f, 0.0f, 10.0f), cubeMaterial);
         
@@ -178,14 +181,22 @@ void OpenGLWindow::MainLoop()
 			}
             capture_frame(renderConfig.tempFolder +"/"+ "frame"+ std::to_string(renderConfig.currentFrame) + ".png");
 			renderConfig.currentFrame++;
-            if (renderConfig.currentFrame > renderConfig.frameCount) {
+            if (renderConfig.currentFrame >= renderConfig.frameCount) {
 				renderConfig.rendering = false;
                 renderToFile(renderConfig.outputName);
+                std::cout << "OUTPUT " << renderConfig.outputName << std::endl;
+                glfwSetWindowShouldClose(_window, true);
 			}
             if (renderConfig.currentFrame % 10 == 0) {
                 std::cout << "Rendered " << renderConfig.currentFrame << " / " << renderConfig.frameCount << "  frames." << std::endl;
             }
-		}
+        }
+        else if (Program::getWorkingMode() == WorkingMode::Frame) {
+            std::string outputFile = Program::getOutputDirectory() + "\\frame" + std::to_string(Program::getFrame()) + ".png";
+            capture_frame(outputFile);
+            glfwSetWindowShouldClose(_window, true);
+            std::cout << "OUTPUT " << outputFile << std::endl;
+        }
 
         glfwSwapBuffers(_window);
         glfwPollEvents();
@@ -201,10 +212,10 @@ void OpenGLWindow::renderObject(Program& program, GLuint VAO, GLenum primitive, 
     modelMatrix = glm::scale(modelMatrix, scale);
 
     glUniformMatrix4fv(program.GetUniformID("uModelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
-    glUniform3fv(program.GetUniformID("uMaterial.ambient"), 1, glm::value_ptr(cubeMaterial.ambient));
-    glUniform3fv(program.GetUniformID("uMaterial.diffuse"), 1, glm::value_ptr(cubeMaterial.diffuse));
-    glUniform3fv(program.GetUniformID("uMaterial.specular"), 1, glm::value_ptr(cubeMaterial.specular));
-    glUniform1f(program.GetUniformID("uMaterial.shininess"), cubeMaterial.shininess);
+    glUniform3fv(program.GetUniformID("uMaterial.ambient"), 1, glm::value_ptr(material.ambient));
+    glUniform3fv(program.GetUniformID("uMaterial.diffuse"), 1, glm::value_ptr(material.diffuse));
+    glUniform3fv(program.GetUniformID("uMaterial.specular"), 1, glm::value_ptr(material.specular));
+    glUniform1f(program.GetUniformID("uMaterial.shininess"), material.shininess);
 
     glBindVertexArray(VAO);
     glDrawArrays(primitive, 0, count);
@@ -266,9 +277,14 @@ void OpenGLWindow::processInput()
 		// Render to video
         renderConfig.currentFrame = 0;
         renderConfig.frameRate = 30;
-        renderConfig.frameCount = totalFrames / 1000 * renderConfig.frameRate;
-        renderConfig.stepPerFrame = totalFrames / renderConfig.frameCount;
-        renderConfig.tempFolder = "./temp";
+        renderConfig.frameCount = appConfig.duration / 1000 * renderConfig.frameRate;
+        renderConfig.stepPerFrame = appConfig.duration / renderConfig.frameCount;
+        renderConfig.tempFolder = Program::getOutputDirectory() + "\\temp";
+        struct stat info;
+        if (stat(renderConfig.tempFolder.c_str(), &info) == -1) {
+			std::filesystem::create_directory(renderConfig.tempFolder);
+		}
+
         renderConfig.outputName = "output.mp4";
         renderConfig.rendering = true;
 
@@ -314,7 +330,6 @@ void OpenGLWindow::processInput()
 
     if (glfwGetKey(_window, GLFW_KEY_6) == GLFW_PRESS)
     {
-		// Look down
 		cameraDirection = glm::vec3(0, -1, 0);
         cameraPosition = glm::vec3(0, 20, 0);
 	}
@@ -408,7 +423,9 @@ void OpenGLWindow::capture_frame(const std::string& filename)
 void OpenGLWindow::renderToFile(const std::string& path)
 {
     std::string size = std::to_string((int)windowResolution.x) + "x" + std::to_string((int)windowResolution.y);
-    system(("ffmpeg.exe -r 30 -f image2 -s " + size + " -i ./temp/frame%d.png -vcodec libx264 -crf 25 -pix_fmt yuv420p output.mp4").c_str());
+    std::string command = "ffmpeg.exe -y -r " + std::to_string(renderConfig.frameRate) + " -f image2 -s " + size + " -i " + renderConfig.tempFolder + "/frame%d.png -vcodec libx264 -crf 25 -pix_fmt yuv420p " + path;
+    std::cout << "Executing command: " << command << std::endl;
+    system(command.c_str());
     std::filesystem::remove_all(renderConfig.tempFolder);
     std::cout << "Video saved to " << path << std::endl;
 }

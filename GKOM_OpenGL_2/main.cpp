@@ -17,13 +17,13 @@
 int main(int argc, char **argv)
 {
     std:char *sceneFolder;
-    bool preview = true;
+    WorkingMode mode = WorkingMode::Frame;
     int frame = 0;
 
     if (argc < 2)
     {
         std::cout << "Usage: " << argv[0] << " <path to scene file>"
-                  << " [preview/render]"
+                  << " [frame/preview/render]"
                   << " [frame=0]" << std::endl;
         return 1;
     } else {
@@ -31,13 +31,18 @@ int main(int argc, char **argv)
     }
     if (argc >= 3)
     {
+        if (strcmp(argv[2], "frame") == 0)
+        {
+			mode = WorkingMode::Frame;
+		}
+		else
         if (strcmp(argv[2], "preview") == 0)
         {
-            preview = true;
+            mode = WorkingMode::Preview;
         }
         else if (strcmp(argv[2], "render") == 0)
         {
-            preview = false;
+            mode = WorkingMode::Render;
         }
     }
     if (argc >= 4)
@@ -46,8 +51,15 @@ int main(int argc, char **argv)
     }
 
     Program::setProgramsDirectory(sceneFolder);
-    Program::setPreview(preview);
+    Program::setWorkingMode(mode);
     Program::setFrame(frame);
+
+    std::string outputDirectory = sceneFolder + std::string("\\output");
+    struct stat info;
+    if (stat(outputDirectory.c_str(), &info) == -1) {
+        std::filesystem::create_directory(outputDirectory);
+    }
+    Program::setOutputDirectory(outputDirectory);
 
     OpenGLWindow openglWindow;
 

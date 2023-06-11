@@ -18,10 +18,10 @@ function hexToRgb(hex) {
   var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result
     ? {
-        r: parseInt(result[1], 16),
-        g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16),
-      }
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16),
+    }
     : null;
 }
 
@@ -58,8 +58,18 @@ const saveFile = async (fileName, content) => {
     });
 };
 
+const removeFile = async (fileName) => {
+  if (directoryHandle == null) {
+    loadAnimation();
+  }
+  directoryHandle.getFileHandle(fileName, { create: false }).then((fileHandle) => {
+    fileHandle.remove();
+  });
+};
+
 const saveAnimation = async () => {
   await saveFile("animation.json", JSON.stringify(animation));
+  renderFrame();
 };
 
 const loadAnimation = async () => {
@@ -83,8 +93,8 @@ const loadAnimation = async () => {
           name: "Camera",
           keyframes: {
             0: {
-              position: [0, 0, 0],
-              rotation: [0, 0, 0],
+              position: [0, 0, 20],
+              rotation: [0, 0, -1],
             },
           },
         },
@@ -93,6 +103,9 @@ const loadAnimation = async () => {
     saveAnimation();
   }
   reloadObjects();
+  $('.editor').show();
+  $('.loadedButton').show();
+
   $("#durationRange").val(0);
 };
 
@@ -231,7 +244,7 @@ function addLight() {
     ambient: [0.2, 0.2, 0.2],
     diffuse: [0.8, 0.8, 0.8],
     specular: [0.8, 0.8, 0.8],
-    color: [1, 1, 1],
+    color: [0.5, 0.5, 1],
     keyframes: {
       0: {
         position: [0, 0, 0],
@@ -248,13 +261,13 @@ const updateConfig = () => {
   let previewFps = $("#configModal .previewFps").val();
 
   if (duration) {
-    animation.duration = duration;
+    animation.duration = parseInt(duration);
   }
   if (prodFps) {
-    animation.prodFps = prodFps;
+    animation.prodFps = parseInt(prodFps);
   }
   if (previewFps) {
-    animation.previewFps = previewFps;
+    animation.previewFps = parseInt(previewFps);
   }
   reloadObjects();
   saveAnimation();
@@ -262,6 +275,7 @@ const updateConfig = () => {
 
 function changeFrame() {
   $("#frameLabel").text(`Frame ${$("#durationRange").val()}`);
+  renderFrame();
 }
 
 const reloadObjects = async () => {
@@ -273,30 +287,27 @@ const reloadObjects = async () => {
   $("#listObjects").empty();
   for (let object of animation.objects) {
     $("#listObjects").append(`<li
-          class="list-group-item d-flex justify-content-between align-items-center list-group-item-action ${
-            selectedObject === object.id ? "active" : ""
-          }" objectId="${object.id}" onclick="selectObj(this)">
-          ${
-            object.type == "camera"
-              ? '<i class="bi bi-camera-video-fill"></i>'
-              : ""
-          }
+          class="list-group-item d-flex justify-content-between align-items-center list-group-item-action ${selectedObject === object.id ? "active" : ""
+      }" objectId="${object.id}" onclick="selectObj(this)">
+          ${object.type == "camera"
+        ? '<i class="bi bi-camera-video-fill"></i>'
+        : ""
+      }
           ${object.type == "object" ? '<i class="bi bi-box2-fill"></i>' : ""}
-            ${
-              object.type == "light"
-                ? '<i class="bi bi-brightness-high-fill"></i>'
-                : ""
-            }
+            ${object.type == "light"
+        ? '<i class="bi bi-brightness-high-fill"></i>'
+        : ""
+      }
           ${object.name}
-          <button class="btn badge badge-danger badge-pill" ${
-            object.type === "camera" ? "disabled" : ""
-          }>X</button>
+          <button class="btn badge badge-danger badge-pill" ${object.type === "camera" ? "disabled" : ""
+      } onclick="removeObj(this)" objectId="${object.id}">X</button>
       </li>`);
   }
   if (selectedObject != null) {
     $(`#objProperty`).css("visibility", "visible");
   } else {
     $(`#objProperty`).css("visibility", "hidden");
+    $(`#objProperty #keyframeProps`).css("visibility", "hidden");
   }
 };
 
@@ -307,6 +318,23 @@ function selectObj(element) {
   selectedKeyframe = null;
   reloadObjects();
   reloadProperties();
+}
+
+function removeObj(element) {
+  element = $(element);
+  let id = element.attr("objectId");
+  let index = animation.objects.findIndex((o) => o.id === id);
+  let obj = animation.objects[index];
+  if (index > -1) {
+    animation.objects.splice(index, 1);
+  }
+  removeFile(obj.modelFile);
+  removeFile(obj.materialFile);
+  selectedObject = null;
+  selectedKeyframe = null;
+  reloadObjects();
+  reloadProperties();
+  saveAnimation();
 }
 
 function getPreviousKeyframe(keyframe) {
@@ -324,8 +352,10 @@ function getPreviousKeyframe(keyframe) {
 function reloadProperties() {
   let obj = animation.objects.find((o) => o.id === selectedObject);
   if (obj == null) {
+    $("#objProperty").css("visibility", "hidden");
     return;
   }
+  $("#objProperty").css("visibility", "visible");
   $("#objProperty #objectName").val(obj.name);
   if (obj.type == "light") {
     $("#objProperty #lightProps").show();
@@ -351,27 +381,26 @@ function reloadProperties() {
   for (let keyframe in obj.keyframes) {
     let keyframeData = obj.keyframes[keyframe];
     $("#objProperty #listKeyframes")
-      .append(`<li class="list-group-item d-flex justify-content-between align-items-center list-group-item-action ${
-      selectedKeyframe == keyframe ? "active" : ""
-    }" onclick="selectKeyframe(this)" frame="${keyframe}">
+      .append(`<li class="list-group-item d-flex justify-content-between align-items-center list-group-item-action ${selectedKeyframe == keyframe ? "active" : ""
+        }" onclick="selectKeyframe(this)" frame="${keyframe}">
         Frame ${keyframe}
         <span>
-            ${
-              keyframeData.position
-                ? '<span class="badge badge-primary badge-pill">Position</span>'
-                : ""
-            }
-            ${
-              keyframeData.rotation
-                ? '<span class="badge badge-primary badge-pill">Rotation</span>'
-                : ""
-            }
-            ${
-              keyframeData.scale
-                ? '<span class="badge badge-primary badge-pill">Scale</span>'
-                : ""
-            }
+            ${keyframeData.position
+          ? '<span class="badge badge-primary badge-pill">Position</span>'
+          : ""
+        }
+            ${keyframeData.rotation
+          ? `<span class="badge badge-primary badge-pill">${obj.type == "camera" ? "Direction" : "Rotation"}</span>`
+          : ""
+        }
+            ${keyframeData.scale
+          ? '<span class="badge badge-primary badge-pill">Scale</span>'
+          : ""
+        }
         </span>
+
+        <button class="btn badge badge-danger badge-pill" ${keyframe == 0 ? "disabled" : ""
+        } onclick="removeKeyframe(this)" keyframe="${keyframe}">X</button>
     </li>`);
   }
   if (selectedKeyframe != null) {
@@ -384,55 +413,49 @@ function reloadProperties() {
     $("#objProperty #keyframeProps").empty();
     $("#objProperty #keyframeProps").append(`<div class="col">
     <label>Position</label>
-    <div class="row framePosition" style="margin: 0">
+    <div class="row position" style="margin: 0">
       <input
         type="text"
         class="form-control col-sm-4"
-        placeholder="X" value="${
-          keyframeData.position ? keyframeData.position[0] : ""
-        }" onchange="updateKeyframe()"
+        placeholder="X" value="${keyframeData.position ? keyframeData.position[0] : ""
+      }" onchange="updateKeyframe()" axis="X"
       />
       <input
         type="text"
         class="form-control col-sm-4"
-        placeholder="Y" value="${
-          keyframeData.position ? keyframeData.position[1] : ""
-        }" onchange="updateKeyframe()"
+        placeholder="Y" value="${keyframeData.position ? keyframeData.position[1] : ""
+      }" onchange="updateKeyframe()" axis="Y"
       />
       <input
         type="text"
         class="form-control col-sm-4"
-        placeholder="Z" value="${
-          keyframeData.position ? keyframeData.position[2] : ""
-        }" onchange="updateKeyframe()"
+        placeholder="Z" value="${keyframeData.position ? keyframeData.position[2] : ""
+      }" onchange="updateKeyframe()" axis="Z"
       />
     </div>
   </div>`);
 
     if (selectedObjectData.type != "light") {
       $("#objProperty #keyframeProps").append(`<div class="col">
-        <label>Rotation</label>
-        <div class="row frameRotation" style="margin: 0">
+        <label>${obj.type == "camera" ? "Direction" : "Rotation"}</label>
+        <div class="row rotation" style="margin: 0">
             <input
             type="text"
             class="form-control col-sm-4"
-            placeholder="X" value="${
-              keyframeData.rotation ? keyframeData.rotation[0] : ""
-            }" onchange="updateKeyframe()"
+            placeholder="X" value="${keyframeData.rotation ? keyframeData.rotation[0] : ""
+        }" onchange="updateKeyframe()" axis="X"
             />
             <input
             type="text"
             class="form-control col-sm-4"
-            placeholder="Y" value="${
-              keyframeData.rotation ? keyframeData.rotation[1] : ""
-            }" onchange="updateKeyframe()"
+            placeholder="Y" value="${keyframeData.rotation ? keyframeData.rotation[1] : ""
+        }" onchange="updateKeyframe()" axis="Y"
             />
             <input
             type="text"
             class="form-control col-sm-4"
-            placeholder="Z" value="${
-              keyframeData.rotation ? keyframeData.rotation[2] : ""
-            }" onchange="updateKeyframe()"
+            placeholder="Z" value="${keyframeData.rotation ? keyframeData.rotation[2] : ""
+        }" onchange="updateKeyframe()" axis="Z"
             />
         </div>
         </div>`);
@@ -443,27 +466,24 @@ function reloadProperties() {
     ) {
       $("#objProperty #keyframeProps")
         .append(`<div class="col"><label>Scale</label>
-        <div class="row frameScale" style="margin: 0">
+        <div class="row scale" style="margin: 0">
         <input
         type="text"
         class="form-control col-sm-4"
-        placeholder="X" value="${
-          keyframeData.scale ? keyframeData.scale[0] : ""
-        }" onchange="updateKeyframe()"
+        placeholder="X" value="${keyframeData.scale ? keyframeData.scale[0] : ""
+          }" onchange="updateKeyframe()" axis="X"
         />
         <input
         type="text"
         class="form-control col-sm-4"
-        placeholder="Y" value="${
-          keyframeData.scale ? keyframeData.scale[1] : ""
-        }" onchange="updateKeyframe()"
+        placeholder="Y" value="${keyframeData.scale ? keyframeData.scale[1] : ""
+          }" onchange="updateKeyframe()" axis="Y"
         />
         <input
         type="text"
         class="form-control col-sm-4"
-        placeholder="Z" value="${
-          keyframeData.scale ? keyframeData.scale[2] : ""
-        }" onchange="updateKeyframe()"
+        placeholder="Z" value="${keyframeData.scale ? keyframeData.scale[2] : ""
+          }" onchange="updateKeyframe()" axis="Z"
         />
         </div>
         </div>`);
@@ -482,7 +502,7 @@ function selectKeyframe(element) {
 
 function addKeyframe() {
   let frame = prompt("Enter frame number");
-  if (frame == null) {
+  if (frame == null || frame == "" || isNaN(frame)) {
     return;
   }
   let obj = animation.objects.find((o) => o.id === selectedObject);
@@ -498,38 +518,48 @@ function addKeyframe() {
   reloadProperties();
 }
 
+function removeKeyframe(element) {
+  element = $(element);
+  let frame = element.attr("keyframe");
+  let obj = animation.objects.find((o) => o.id === selectedObject);
+  delete obj.keyframes[frame];
+  selectedKeyframe = null;
+  reloadProperties();
+  saveAnimation();
+}
+
 function updateKeyframe() {
   let obj = animation.objects.find((o) => o.id === selectedObject);
   let keyframeData = obj.keyframes[selectedKeyframe];
   let position = [
-    $("#objProperty #keyframeProps .position input[axis='X']").val(),
-    $("#objProperty #keyframeProps .position input[axis='Y']").val(),
-    $("#objProperty #keyframeProps .position input[axis='Z']").val(),
+    parseFloat($("#objProperty #keyframeProps .position input[axis='X']").val()),
+    parseFloat($("#objProperty #keyframeProps .position input[axis='Y']").val()),
+    parseFloat($("#objProperty #keyframeProps .position input[axis='Z']").val()),
   ];
   let rotation = [
-    $("#objProperty #keyframeProps .rotation input[axis='X']").val(),
-    $("#objProperty #keyframeProps .rotation input[axis='Y']").val(),
-    $("#objProperty #keyframeProps .rotation input[axis='Z']").val(),
+    parseFloat($("#objProperty #keyframeProps .rotation input[axis='X']").val()),
+    parseFloat($("#objProperty #keyframeProps .rotation input[axis='Y']").val()),
+    parseFloat($("#objProperty #keyframeProps .rotation input[axis='Z']").val()),
   ];
   let scale = [
-    $("#objProperty #keyframeProps .scale input[axis='X']").val(),
-    $("#objProperty #keyframeProps .scale input[axis='Y']").val(),
-    $("#objProperty #keyframeProps .scale input[axis='Z']").val(),
+    parseFloat($("#objProperty #keyframeProps .scale input[axis='X']").val()),
+    parseFloat($("#objProperty #keyframeProps .scale input[axis='Y']").val()),
+    parseFloat($("#objProperty #keyframeProps .scale input[axis='Z']").val()),
   ];
-  if (position[0] || position[1] || position[2]) {
+  if (!isNaN(position[0]) || !isNaN(position[1]) || !isNaN(position[2])) {
     keyframeData.position = position;
   } else {
-    keyframeData.position = null;
+    delete keyframeData.position;
   }
-  if (rotation[0] || rotation[1] || rotation[2]) {
+  if (!isNaN(rotation[0]) || !isNaN(rotation[1]) || !isNaN(rotation[2])) {
     keyframeData.rotation = rotation;
   } else {
-    keyframeData.rotation = null;
+    delete keyframeData.rotation;
   }
-  if (scale[0] || scale[1] || scale[2]) {
+  if (!isNaN(scale[0]) || !isNaN(scale[1]) || !isNaN(scale[2])) {
     keyframeData.scale = scale;
   } else {
-    keyframeData.scale = null;
+    delete keyframeData.scale;
   }
   reloadProperties();
   saveAnimation();
@@ -541,19 +571,19 @@ function updateLight() {
   color = hexToRgb(color);
   light.color = [color.r / 255, color.g / 255, color.b / 255];
   light.ambient = [
-    $("#objProperty #lightProps .lightAmbient .x").val(),
-    $("#objProperty #lightProps .lightAmbient .y").val(),
-    $("#objProperty #lightProps .lightAmbient .z").val(),
+    parseFloat($("#objProperty #lightProps .lightAmbient .x").val()),
+    parseFloat($("#objProperty #lightProps .lightAmbient .y").val()),
+    parseFloat($("#objProperty #lightProps .lightAmbient .z").val()),
   ];
   light.diffuse = [
-    $("#objProperty #lightProps .lightDiffuse .x").val(),
-    $("#objProperty #lightProps .lightDiffuse .y").val(),
-    $("#objProperty #lightProps .lightDiffuse .z").val(),
+    parseFloat($("#objProperty #lightProps .lightDiffuse .x").val()),
+    parseFloat($("#objProperty #lightProps .lightDiffuse .y").val()),
+    parseFloat($("#objProperty #lightProps .lightDiffuse .z").val()),
   ];
   light.specular = [
-    $("#objProperty #lightProps .lightSpecular .x").val(),
-    $("#objProperty #lightProps .lightSpecular .y").val(),
-    $("#objProperty #lightProps .lightSpecular .z").val(),
+    parseFloat($("#objProperty #lightProps .lightSpecular .x").val()),
+    parseFloat($("#objProperty #lightProps .lightSpecular .y").val()),
+    parseFloat($("#objProperty #lightProps .lightSpecular .z").val()),
   ];
   reloadProperties();
   saveAnimation();
@@ -563,18 +593,51 @@ async function getDirectoryTree() {
   let files = {};
   for await (let entry of directoryHandle.values()) {
     if (entry.kind === "file" && !entry.name.startsWith(".")) {
-      files[entry.name] = await(await entry.getFile()).text();
+      files[entry.name] = (await (await entry.getFile()).text()).replaceAll("null", 0);
     }
   }
   return files;
 }
 
 async function preview() {
-  let result = await axios.post('/api/preview', await getDirectoryTree());
-  console.log(result);
+  try {
+    $('.alertRender').text('Rendering, please wait...');
+    $('.alertRender').show();
+    let result = await axios.post('/api/preview', await getDirectoryTree());
+    console.log(result);
+    $('#videoSource').attr('src', result.data.path);
+    $('#videoModal').modal('show');
+    document.getElementById('videoPlayer').load();
+    document.getElementById('videoPlayer').play()
+  } catch (error) {
+    alert(`Error: ${error}`);
+  }
+  $('.alertRender').hide();
 }
 
 async function render() {
-  let result = await axios.post('/api/render', await getDirectoryTree());
-  console.log(result);
+  try {
+    $('.alertRender').text('Rendering, please wait...');
+    $('.alertRender').show();
+    let result = await axios.post('/api/render', await getDirectoryTree());
+    console.log(result);
+    $('#videoSource').attr('src', result.data.path);
+    $('#videoModal').modal('show');
+    document.getElementById('videoPlayer').load();
+    document.getElementById('videoPlayer').play()
+  } catch (error) {
+    alert(`Error: ${error}`);
+  }
+  $('.alertRender').hide();
+}
+
+async function renderFrame() {
+  try {
+    let result = await axios.post(`/api/frame/${$("#durationRange").val()}`, await getDirectoryTree());
+    if (result.status == 200) {
+      $('#renderImg').attr('src', "data:image/png;base64," + result.data);
+    }
+  } catch (error) {
+    alert(`Error: ${error}`);
+  }
 }

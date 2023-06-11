@@ -7,6 +7,14 @@
 #include <string>
 #include <map>
 
+
+enum class WorkingMode
+{
+	Frame,
+	Preview,
+	Render
+};
+
 class Program
 {
 public:
@@ -14,11 +22,13 @@ public:
 	Program();
 
 	static void setProgramsDirectory(std::string programDirectory);
-	static void setPreview(bool preview);
+	static void setWorkingMode(WorkingMode mode);
 	static std::string getProgramsDirectory();
-	static bool getPreview();
+	static WorkingMode getWorkingMode();
 	static void setFrame(int frame);
 	static int getFrame();
+	static void setOutputDirectory(std::string outputDirectory);
+	static std::string getOutputDirectory();
 
 	GLuint GetID();
 
@@ -44,7 +54,8 @@ private:
 	std::map<std::string, GLuint> _uniformsID;
 
 	static std::string _programsDirectory;
-	static bool _preview;
+	static WorkingMode _mode;
 	static int _frame;
+	static std::string _outputDirectory;
 };
 

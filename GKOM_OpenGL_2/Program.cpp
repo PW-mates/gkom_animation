@@ -1,6 +1,9 @@
 #include "Program.h"
 
 std::string Program::_programsDirectory = "";
+WorkingMode Program::_mode = WorkingMode::Frame;
+std::string Program::_outputDirectory = "";
+int Program::_frame = 0;
 
 Program::Program()
 {
@@ -12,9 +15,9 @@ void Program::setProgramsDirectory(std::string programDirectory)
     _programsDirectory = programDirectory;
 }
 
-void Program::setPreview(bool preview)
+void Program::setWorkingMode(WorkingMode mode)
 {
-    _preview = preview;
+	_mode = mode;
 }
 
 void Program::setFrame(int frame)
@@ -27,14 +30,24 @@ std::string Program::getProgramsDirectory()
     return _programsDirectory;
 }
 
-bool Program::getPreview()
+WorkingMode Program::getWorkingMode()
 {
-    return _preview;
+	return _mode;
 }
 
 int Program::getFrame()
 {
     return _frame;
+}
+
+void Program::setOutputDirectory(std::string outputDirectory)
+{
+	_outputDirectory = outputDirectory;
+}
+
+std::string Program::getOutputDirectory()
+{
+	return _outputDirectory;
 }
 
 GLuint Program::GetID()
@@ -67,8 +80,8 @@ bool Program::Load(std::string vertexShaderFilePath, std::string fragmentShaderS
 
     bool status;
 
-    vertexShaderFilePath = _programsDirectory + "/" + vertexShaderFilePath;
-    fragmentShaderShaderPath = _programsDirectory + "/" + fragmentShaderShaderPath;
+    //vertexShaderFilePath = _programsDirectory + "/" + vertexShaderFilePath;
+    //fragmentShaderShaderPath = _programsDirectory + "/" + fragmentShaderShaderPath;
 
     status = readFile(vertexShaderFilePath, vertexShaderSource);
 

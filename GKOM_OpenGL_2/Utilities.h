@@ -18,34 +18,14 @@
 #include <chrono>
 
 #include <sys/stat.h>
+#include "json.hpp"
+using json = nlohmann::json;
+#include "Material.h"
+#include "Camera.h"
+#include "PointLight.h"
+#include "AppConfig.h"
+#include "Object.h"
 
-
-struct Material {
-    std::string name;
-    glm::vec3 ambient;
-    glm::vec3 diffuse;
-    glm::vec3 specular;
-    float shininess;
-};
-
-struct PointLight {
-	glm::vec3 position;
-	glm::vec3 ambient;
-	glm::vec3 diffuse;
-	glm::vec3 specular;
-    glm::vec3 color;
-};
-
-struct Camera {
-    glm::vec3 position;
-    glm::vec3 direction;
-    glm::vec3 up;
-};
-
-struct Keyframe {
-    float time;
-    glm::vec3 value;
-};
 
 struct RenderConfig {
     unsigned int currentFrame;
@@ -64,17 +44,4 @@ GLuint LoadObj(const std::string& path, GLenum* primitive, unsigned int* count, 
 Material DefaultMtl();
 Material LoadMtl(const std::string& path);
 PointLight DefaultPointLight();
-
-class Animation {
-public:
-    Animation();
-    Animation(std::vector<Keyframe> keyframes);
-    ~Animation();
-
-    glm::vec3 evaluate(float time);
-    void insertKeyframe(float time, glm::vec3 value);
-    void editKeyframe(float time, glm::vec3 value);
-
-private:
-    std::vector<Keyframe> keyframes;
-};
+void LoadAnimation(std::string programDirectory, AppConfig* appConfig, Camera *camera, std::vector<PointLight>* lights, std::vector<Object>* objects);
